@@ -1,7 +1,5 @@
-import { Stack } from "expo-router";
-import "../global.css"
 import React, { useEffect } from 'react';
-import { useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { useAuth } from '../src/hooks/useAuth';
@@ -36,10 +34,6 @@ function RootNavigation() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="register" />
-      <Stack.Screen name="(auth)" />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(app)" options={{ headerShown: false }} />
     </Stack>
