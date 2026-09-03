@@ -131,7 +131,13 @@ export default function LoginScreen() {
                 onPress={handleLogin}
               />
 
-              
+              {/* Demo Hint */}
+              <View className="mt-4 p-3 bg-indigo-50/70 rounded-xl border border-indigo-100">
+                <Text className="text-xs text-indigo-700 text-center">
+                  💡 <Text className="font-semibold">Quick test:</Text> Type any valid email & 6+ character password to sign in.
+                </Text>
+              </View>
+            </View>
 
             {/* Footer / Register Link */}
             <View className="flex-1 justify-end pb-4 pt-8">
