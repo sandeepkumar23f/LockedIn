@@ -15,7 +15,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  
+  // Firebase automatically monitors login session and restores it from AsyncStorage!
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      try {
+        if (firebaseUser) {
+          const userToken = await firebaseUser.getIdToken();
+          setUser(formatUser(firebaseUser));
+          setToken(userToken);
+        } else {
+          setUser(null);
+          setToken(null);
+        }
+      } catch (error) {
+        console.error('Error in onAuthStateChanged:', error);
+        setUser(null);
+        setToken(null);
+      } finally {
+        setIsLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const login = async (credentials: LoginCredentials) => {
+    setIsLoading(true);
+    try {
+      const loggedInUser = await authService.login(credentials);
+      setUser(loggedInUser);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const register = async (credentials: RegisterCredentials) => {
     setIsLoading(true);
