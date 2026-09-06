@@ -40,28 +40,36 @@ export const eventService = {
   ): Unsubscribe {
     const q = query(
       collection(db, EVENTS_COLLECTION),
-      where('userId', '==', userId),
-      orderBy('date', 'asc'),
-      orderBy('time', 'asc')
+      where('userId', '==', userId)
     );
 
-    return onSnapshot(q, (snapshot) => {
-      const events: EventItem[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        events.push({
-          id: doc.id,
-          userId: data.userId,
-          title: data.title,
-          description: data.description,
-          date: data.date,
-          time: data.time,
-          isCompleted: data.isCompleted || false,
-          createdAt: data.createdAt,
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const events: EventItem[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          events.push({
+            id: docSnap.id,
+            userId: data.userId,
+            title: data.title,
+            description: data.description,
+            date: data.date,
+            time: data.time,
+            isCompleted: data.isCompleted || false,
+            createdAt: data.createdAt,
+          });
         });
-      });
-      callback(events);
-    });
+
+        // Sort events chronologically by date then time in memory (avoids composite index error)
+        events.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+
+        callback(events);
+      },
+      (error) => {
+        console.error('Error in subscribeToUserEvents:', error);
+      }
+    );
   },
 
   // Toggle completion status

@@ -10,12 +10,17 @@ interface EventCardProps {
 }
 
 export const EventCard: React.FC<EventCardProps> = ({ event, onToggle, onDelete }) => {
-  const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':');
-    const hour = parseInt(hours);
+  const formatTime = (timeStr: string) => {
+    if (!timeStr) return '';
+    if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) {
+      return timeStr;
+    }
+    const [hours, minutes = '00'] = timeStr.split(':');
+    const hour = parseInt(hours, 10);
+    if (isNaN(hour)) return timeStr;
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const hour12 = hour % 12 || 12;
-    return `${hour12}:${minutes} ${ampm}`;
+    return `${hour12}:${minutes.padStart(2, '0')} ${ampm}`;
   };
 
   return (

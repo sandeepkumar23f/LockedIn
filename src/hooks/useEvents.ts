@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { eventService } from '@/src/services/eventService';
-import { useAuth } from '@/src/contexts/AuthContext';
+import { useAuth } from '@/src/hooks/useAuth';
 import { EventItem, CreateEventInput } from '@/src/types/event.types';
 
 export const useEvents = () => {
@@ -16,7 +16,7 @@ export const useEvents = () => {
     }
 
     setLoading(true);
-    const unsubscribe = eventService.subscribeToUserEvents(user.uid, (updatedEvents) => {
+    const unsubscribe = eventService.subscribeToUserEvents(user.id, (updatedEvents) => {
       setEvents(updatedEvents);
       setLoading(false);
     });
@@ -27,7 +27,7 @@ export const useEvents = () => {
   const createEvent = useCallback(async (input: CreateEventInput) => {
     if (!user) return null;
     try {
-      return await eventService.createEvent(user.uid, input);
+      return await eventService.createEvent(user.id, input);
     } catch (error) {
       console.error('Error creating event:', error);
       return null;

@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 // @ts-ignore - getReactNativePersistence is included in runtime bundle but missing in Web TS definition
 import { initializeAuth, getReactNativePersistence, getAuth, Auth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
@@ -27,3 +28,5 @@ try {
 }
 
 export const auth = authInstance;
+export const db = getFirestore(app);
+
