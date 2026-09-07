@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, FlatList, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/hooks/useAuth';
@@ -33,16 +33,30 @@ export default function HomeScreen() {
       if (result) {
         setModalVisible(false);
       } else {
-        Alert.alert('Error', 'Failed to create event');
+        Alert.alert('Error', 'Failed to create event. Please check your connection.');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create event');
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Failed to create event');
     } finally {
       setIsCreating(false);
     }
   };
 
   const handleDeleteEvent = (eventId: string, notificationId?: string) => {
+    const executeDelete = async () => {
+      const success = await deleteEvent(eventId, notificationId);
+      if (!success) {
+        Alert.alert('Error', 'Failed to delete event. Please check your connection.');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm('Are you sure you want to delete this event?')) {
+        executeDelete();
+      }
+      return;
+    }
+
     Alert.alert(
       'Delete Event',
       'Are you sure you want to delete this event?',
@@ -51,7 +65,7 @@ export default function HomeScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => deleteEvent(eventId, notificationId),
+          onPress: executeDelete,
         },
       ]
     );

@@ -35,20 +35,38 @@ export const eventService = {
       }
     }
 
-    const newEvent: Omit<EventItem, 'id'> = {
+    // Build document payload without any undefined values (Firestore rejects undefined)
+    const newEventData: Record<string, any> = {
       userId,
-      title: input.title,
-      description: input.description || '',
+      title: input.title.trim(),
+      description: (input.description || '').trim(),
+      date: input.date,
+      time: input.time,
+      isCompleted: false,
+      createdAt: Timestamp.now(),
+    };
+
+    if (notificationId) {
+      newEventData.notificationId = notificationId;
+    }
+    if (input.reminderOffsetMinutes !== undefined) {
+      newEventData.reminderOffsetMinutes = input.reminderOffsetMinutes;
+    }
+
+    const docRef = await addDoc(collection(db, EVENTS_COLLECTION), newEventData);
+
+    return {
+      id: docRef.id,
+      userId,
+      title: input.title.trim(),
+      description: (input.description || '').trim(),
       date: input.date,
       time: input.time,
       isCompleted: false,
       notificationId: notificationId || undefined,
       reminderOffsetMinutes: input.reminderOffsetMinutes,
-      createdAt: Timestamp.now(),
+      createdAt: newEventData.createdAt,
     };
-
-    const docRef = await addDoc(collection(db, EVENTS_COLLECTION), newEvent);
-    return { id: docRef.id, ...newEvent };
   },
 
   // Subscribe to user's events (real-time)
