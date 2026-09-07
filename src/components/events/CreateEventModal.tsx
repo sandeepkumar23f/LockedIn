@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 interface CreateEventModalProps {
   visible: boolean;
@@ -25,15 +26,6 @@ interface CreateEventModalProps {
   ) => Promise<void>;
   isLoading: boolean;
 }
-
-const QUICK_TIMES = [
-  { label: '09:00 AM', value: '09:00' },
-  { label: '11:00 AM', value: '11:00' },
-  { label: '01:00 PM', value: '13:00' },
-  { label: '03:00 PM', value: '15:00' },
-  { label: '06:00 PM', value: '18:00' },
-  { label: '08:00 PM', value: '20:00' },
-];
 
 const REMINDER_OPTIONS: { label: string; value: number | undefined }[] = [
   { label: 'No Reminder', value: undefined },
@@ -49,30 +41,102 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   onCreate,
   isLoading,
 }) => {
-  const getTodayString = () => new Date().toISOString().split('T')[0];
-  const getTomorrowString = () => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split('T')[0];
+  const getTodayDate = () => new Date();
+  const formatDateString = (d: Date) => {
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
+  const formatTimeString = (d: Date) => {
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  // State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(getTodayString());
-  const [time, setTime] = useState('13:00'); // Default to 1:00 PM
-  const [reminderOffset, setReminderOffset] = useState<number | undefined>(0); // Default to At Event Time
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() + 15); // Default to 15 mins in future
+    return d;
+  });
+  const [date, setDate] = useState(() => formatDateString(new Date()));
+  const [time, setTime] = useState(() => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() + 15);
+    return formatTimeString(d);
+  });
+  const [reminderOffset, setReminderOffset] = useState<number | undefined>(0);
+
+  // Picker visibility
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const resetForm = () => {
+    const nextTime = new Date();
+    nextTime.setMinutes(nextTime.getMinutes() + 15);
     setTitle('');
     setDescription('');
-    setDate(getTodayString());
-    setTime('13:00');
+    setSelectedDate(nextTime);
+    setDate(formatDateString(new Date()));
+    setTime(formatTimeString(nextTime));
     setReminderOffset(0);
+    setShowTimePicker(false);
+    setShowDatePicker(false);
   };
 
   const handleClose = () => {
     resetForm();
     onClose();
+  };
+
+  // Handle native time change
+  const handleTimeChange = (event: DateTimePickerEvent, newDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
+    if (event.type === 'set' && newDate) {
+      const updated = new Date(selectedDate);
+      updated.setHours(newDate.getHours(), newDate.getMinutes());
+      setSelectedDate(updated);
+      setTime(formatTimeString(updated));
+    }
+  };
+
+  // Handle native date change
+  const handleDateChange = (event: DateTimePickerEvent, newDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (event.type === 'set' && newDate) {
+      const updated = new Date(selectedDate);
+      updated.setFullYear(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
+      setSelectedDate(updated);
+      setDate(formatDateString(updated));
+    }
+  };
+
+  // Quick preset adder (e.g. +5 mins, +15 mins, +1 hour)
+  const applyTimeOffset = (minutesToAdd: number) => {
+    const target = new Date();
+    target.setMinutes(target.getMinutes() + minutesToAdd);
+    setSelectedDate(target);
+    setDate(formatDateString(target));
+    setTime(formatTimeString(target));
+  };
+
+  // Display formatted time (e.g., 01:30 PM)
+  const formatDisplayTime = (timeStr: string) => {
+    if (!timeStr) return '';
+    const [hoursStr, minutesStr = '00'] = timeStr.split(':');
+    const h = parseInt(hoursStr, 10);
+    if (isNaN(h)) return timeStr;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12.toString().padStart(2, '0')}:${minutesStr.padStart(2, '0')} ${ampm}`;
   };
 
   const handleCreate = async () => {
@@ -93,7 +157,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View className="flex-1 bg-black/50 justify-end">
-        <View className="bg-white rounded-t-3xl px-6 pt-6 pb-10 max-h-[88%]">
+        <View className="bg-white rounded-t-3xl px-6 pt-6 pb-10 max-h-[90%]">
           {/* Handle Bar */}
           <View className="w-12 h-1.5 bg-gray-300 rounded-full self-center mb-4" />
 
@@ -115,7 +179,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
             <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Title */}
+              {/* Title Input */}
               <View className="mb-4">
                 <Text className="text-gray-700 font-semibold text-sm mb-1.5">
                   Event Title *
@@ -129,100 +193,142 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                 />
               </View>
 
-              {/* Quick Time Selector */}
-              <View className="mb-4">
-                <Text className="text-gray-700 font-semibold text-sm mb-1.5">
-                  Select Time *
-                </Text>
-                <View className="flex-row flex-wrap gap-2 mb-2">
-                  {QUICK_TIMES.map((item) => (
-                    <TouchableOpacity
-                      key={item.value}
-                      className={`px-3 py-2 rounded-lg border ${
-                        time === item.value
-                          ? 'bg-indigo-600 border-indigo-600'
-                          : 'bg-gray-50 border-gray-200'
-                      }`}
-                      onPress={() => setTime(item.value)}
-                    >
-                      <Text
-                        className={`text-xs font-semibold ${
-                          time === item.value ? 'text-white' : 'text-gray-700'
-                        }`}
-                      >
-                        {item.label}
+              {/* Time & Date Row */}
+              <View className="flex-row gap-3 mb-4">
+                {/* Time Picker Card */}
+                <View className="flex-1">
+                  <Text className="text-gray-700 font-semibold text-sm mb-1.5">
+                    Time *
+                  </Text>
+                  <TouchableOpacity
+                    className="flex-row items-center bg-indigo-50 border border-indigo-200 rounded-xl px-3.5 py-3"
+                    onPress={() => {
+                      if (Platform.OS !== 'web') {
+                        setShowTimePicker(true);
+                      }
+                    }}
+                  >
+                    <Ionicons name="time" size={18} color="#4F46E5" style={{ marginRight: 8 }} />
+                    <View className="flex-1">
+                      <Text className="text-sm font-bold text-indigo-900">
+                        {formatDisplayTime(time)}
                       </Text>
-                    </TouchableOpacity>
-                  ))}
+                      <Text className="text-[10px] text-indigo-500">
+                        {Platform.OS === 'web' ? 'Use presets or type below' : 'Tap to pick'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  {Platform.OS === 'web' && (
+                    <TextInput
+                      className="bg-gray-50 rounded-lg px-3 py-1.5 border border-gray-200 text-xs text-gray-800 mt-1.5"
+                      value={time}
+                      onChangeText={setTime}
+                      placeholder="HH:mm (e.g. 13:00)"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  )}
                 </View>
 
-                {/* Custom Time Input */}
-                <View className="flex-row items-center bg-gray-50 rounded-xl px-3.5 py-2.5 border border-gray-200">
-                  <Ionicons name="time-outline" size={18} color="#6B7280" style={{ marginRight: 8 }} />
-                  <TextInput
-                    className="flex-1 text-sm text-gray-900"
-                    placeholder="Or type time (e.g., 13:00 or 1:00 PM)"
-                    placeholderTextColor="#9CA3AF"
-                    value={time}
-                    onChangeText={setTime}
-                  />
+                {/* Date Picker Card */}
+                <View className="flex-1">
+                  <Text className="text-gray-700 font-semibold text-sm mb-1.5">
+                    Date *
+                  </Text>
+                  <TouchableOpacity
+                    className="flex-row items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3"
+                    onPress={() => {
+                      if (Platform.OS !== 'web') {
+                        setShowDatePicker(true);
+                      }
+                    }}
+                  >
+                    <Ionicons name="calendar-outline" size={18} color="#6B7280" style={{ marginRight: 8 }} />
+                    <View className="flex-1">
+                      <Text className="text-sm font-semibold text-gray-800">
+                        {date}
+                      </Text>
+                      <Text className="text-[10px] text-gray-400">
+                        {Platform.OS === 'web' ? 'Type date below' : 'Tap to change'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  {Platform.OS === 'web' && (
+                    <TextInput
+                      className="bg-gray-50 rounded-lg px-3 py-1.5 border border-gray-200 text-xs text-gray-800 mt-1.5"
+                      value={date}
+                      onChangeText={setDate}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  )}
                 </View>
               </View>
 
-              {/* Date Selector */}
+              {/* Quick Time Presets (Perfect for testing & fast creation) */}
               <View className="mb-4">
-                <Text className="text-gray-700 font-semibold text-sm mb-1.5">
-                  Date
+                <Text className="text-gray-500 text-xs font-medium mb-1.5">
+                  Quick Presets
                 </Text>
-                <View className="flex-row gap-2 mb-2">
+                <View className="flex-row flex-wrap gap-2">
                   <TouchableOpacity
-                    className={`flex-1 py-2 rounded-lg border items-center ${
-                      date === getTodayString()
-                        ? 'bg-indigo-600 border-indigo-600'
-                        : 'bg-gray-50 border-gray-200'
-                    }`}
-                    onPress={() => setDate(getTodayString())}
+                    className="bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200"
+                    onPress={() => applyTimeOffset(5)}
                   >
-                    <Text
-                      className={`text-xs font-semibold ${
-                        date === getTodayString() ? 'text-white' : 'text-gray-700'
-                      }`}
-                    >
-                      Today
-                    </Text>
+                    <Text className="text-xs font-semibold text-gray-700">+5 mins</Text>
                   </TouchableOpacity>
-
                   <TouchableOpacity
-                    className={`flex-1 py-2 rounded-lg border items-center ${
-                      date === getTomorrowString()
-                        ? 'bg-indigo-600 border-indigo-600'
-                        : 'bg-gray-50 border-gray-200'
-                    }`}
-                    onPress={() => setDate(getTomorrowString())}
+                    className="bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200"
+                    onPress={() => applyTimeOffset(15)}
                   >
-                    <Text
-                      className={`text-xs font-semibold ${
-                        date === getTomorrowString() ? 'text-white' : 'text-gray-700'
-                      }`}
-                    >
-                      Tomorrow
-                    </Text>
+                    <Text className="text-xs font-semibold text-gray-700">+15 mins</Text>
                   </TouchableOpacity>
-                </View>
-
-                <View className="flex-row items-center bg-gray-50 rounded-xl px-3.5 py-2.5 border border-gray-200">
-                  <Ionicons name="calendar-outline" size={18} color="#6B7280" style={{ marginRight: 8 }} />
-                  <TextInput
-                    className="flex-1 text-sm text-gray-900"
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor="#9CA3AF"
-                    value={date}
-                    onChangeText={setDate}
-                  />
+                  <TouchableOpacity
+                    className="bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200"
+                    onPress={() => applyTimeOffset(30)}
+                  >
+                    <Text className="text-xs font-semibold text-gray-700">+30 mins</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200"
+                    onPress={() => applyTimeOffset(60)}
+                  >
+                    <Text className="text-xs font-semibold text-gray-700">+1 hour</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200"
+                    onPress={() => {
+                      const t = new Date();
+                      t.setHours(13, 0, 0, 0);
+                      setSelectedDate(t);
+                      setTime('13:00');
+                    }}
+                  >
+                    <Text className="text-xs font-semibold text-gray-700">1:00 PM</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Notification & Reminder Selector */}
+              {/* Native Date & Time Pickers */}
+              {showTimePicker && Platform.OS !== 'web' && (
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="time"
+                  is24Hour={false}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleTimeChange}
+                />
+              )}
+
+              {showDatePicker && Platform.OS !== 'web' && (
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleDateChange}
+                />
+              )}
+
+              {/* Reminder Notification Selection */}
               <View className="mb-4">
                 <View className="flex-row items-center mb-1.5">
                   <Ionicons name="notifications-outline" size={16} color="#4F46E5" style={{ marginRight: 6 }} />
@@ -256,7 +362,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                 </View>
               </View>
 
-              {/* Description */}
+              {/* Notes / Description */}
               <View className="mb-6">
                 <Text className="text-gray-700 font-semibold text-sm mb-1.5">
                   Notes (Optional)
@@ -284,7 +390,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                   <ActivityIndicator color="white" />
                 ) : (
                   <Text className="text-white font-semibold text-base">
-                    Save Event
+                    Save Event & Set Reminder
                   </Text>
                 )}
               </TouchableOpacity>
