@@ -5,8 +5,8 @@ import { EventItem } from '@/src/types/event.types';
 
 interface EventCardProps {
   event: EventItem;
-  onToggle: (id: string, isCompleted: boolean) => void;
-  onDelete: (id: string) => void;
+  onToggle: (id: string, isCompleted: boolean, notificationId?: string) => void;
+  onDelete: (id: string, notificationId?: string) => void;
 }
 
 export const EventCard: React.FC<EventCardProps> = ({ event, onToggle, onDelete }) => {
@@ -22,6 +22,14 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onToggle, onDelete 
     const hour12 = hour % 12 || 12;
     return `${hour12}:${minutes.padStart(2, '0')} ${ampm}`;
   };
+
+  const getReminderLabel = () => {
+    if (event.reminderOffsetMinutes === undefined) return null;
+    if (event.reminderOffsetMinutes === 0) return 'At event time';
+    return `${event.reminderOffsetMinutes}m before`;
+  };
+
+  const reminderLabel = getReminderLabel();
 
   return (
     <View className={`bg-white rounded-xl p-4 mb-3 shadow-sm ${event.isCompleted ? 'opacity-70' : ''}`}>
@@ -43,14 +51,24 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onToggle, onDelete 
               {event.description}
             </Text>
           )}
-          <Text className="text-xs text-gray-400 mt-1">{event.date}</Text>
+          <View className="flex-row items-center mt-1 flex-wrap gap-x-2">
+            <Text className="text-xs text-gray-400">{event.date}</Text>
+            {reminderLabel && !event.isCompleted && (
+              <View className="flex-row items-center bg-indigo-50 px-2 py-0.5 rounded-full">
+                <Ionicons name="notifications" size={10} color="#4F46E5" />
+                <Text className="text-[10px] text-indigo-600 font-semibold ml-1">
+                  {reminderLabel}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Actions */}
         <View className="flex-row">
           <TouchableOpacity
             className="w-10 h-10 items-center justify-center"
-            onPress={() => onToggle(event.id, !event.isCompleted)}
+            onPress={() => onToggle(event.id, !event.isCompleted, event.notificationId)}
           >
             <Ionicons
               name={event.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
@@ -60,7 +78,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onToggle, onDelete 
           </TouchableOpacity>
           <TouchableOpacity
             className="w-10 h-10 items-center justify-center"
-            onPress={() => onDelete(event.id)}
+            onPress={() => onDelete(event.id, event.notificationId)}
           >
             <Ionicons name="trash-outline" size={22} color="#EF4444" />
           </TouchableOpacity>

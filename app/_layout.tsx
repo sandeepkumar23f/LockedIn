@@ -3,12 +3,17 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { useAuth } from '../src/hooks/useAuth';
+import { notificationService } from '../src/services/notificationService';
 import '../global.css';
 
 function RootNavigation() {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  useEffect(() => {
+    notificationService.initNotifications();
+  }, []);
 
   useEffect(() => {
     if (isLoading) return;

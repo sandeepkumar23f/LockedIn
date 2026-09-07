@@ -34,9 +34,9 @@ export const useEvents = () => {
     }
   }, [user]);
 
-  const toggleEvent = useCallback(async (eventId: string, isCompleted: boolean) => {
+  const toggleEvent = useCallback(async (eventId: string, isCompleted: boolean, notificationId?: string) => {
     try {
-      await eventService.toggleEventStatus(eventId, isCompleted);
+      await eventService.toggleEventStatus(eventId, isCompleted, notificationId);
       return true;
     } catch (error) {
       console.error('Error toggling event:', error);
@@ -44,9 +44,9 @@ export const useEvents = () => {
     }
   }, []);
 
-  const deleteEvent = useCallback(async (eventId: string) => {
+  const deleteEvent = useCallback(async (eventId: string, notificationId?: string) => {
     try {
-      await eventService.deleteEvent(eventId);
+      await eventService.deleteEvent(eventId, notificationId);
       return true;
     } catch (error) {
       console.error('Error deleting event:', error);

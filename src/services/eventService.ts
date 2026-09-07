@@ -6,26 +6,44 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   onSnapshot,
   Timestamp,
   Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '@/src/config/firebase';
 import { EventItem, CreateEventInput } from '@/src/types/event.types';
+import { notificationService } from './notificationService';
 
 const EVENTS_COLLECTION = 'events';
 
 export const eventService = {
-  // Create a new event
+  // Create a new event and optionally schedule a reminder
   async createEvent(userId: string, input: CreateEventInput): Promise<EventItem> {
-    const newEvent = {
+    let notificationId: string | undefined;
+
+    // Schedule notification if reminder offset is specified
+    if (input.reminderOffsetMinutes !== undefined) {
+      const scheduledId = await notificationService.scheduleEventReminder(
+        input.title,
+        input.description,
+        input.date,
+        input.time,
+        input.reminderOffsetMinutes
+      );
+      if (scheduledId) {
+        notificationId = scheduledId;
+      }
+    }
+
+    const newEvent: Omit<EventItem, 'id'> = {
       userId,
       title: input.title,
       description: input.description || '',
       date: input.date,
       time: input.time,
       isCompleted: false,
+      notificationId: notificationId || undefined,
+      reminderOffsetMinutes: input.reminderOffsetMinutes,
       createdAt: Timestamp.now(),
     };
 
@@ -57,6 +75,8 @@ export const eventService = {
             date: data.date,
             time: data.time,
             isCompleted: data.isCompleted || false,
+            notificationId: data.notificationId,
+            reminderOffsetMinutes: data.reminderOffsetMinutes,
             createdAt: data.createdAt,
           });
         });
@@ -72,15 +92,28 @@ export const eventService = {
     );
   },
 
-  // Toggle completion status
-  async toggleEventStatus(eventId: string, isCompleted: boolean): Promise<void> {
+  // Toggle completion status (and cancel reminder if completed)
+  async toggleEventStatus(
+    eventId: string,
+    isCompleted: boolean,
+    notificationId?: string
+  ): Promise<void> {
     const docRef = doc(db, EVENTS_COLLECTION, eventId);
     await updateDoc(docRef, { isCompleted });
+
+    // If marked as completed, cancel upcoming reminder alarm
+    if (isCompleted && notificationId) {
+      await notificationService.cancelEventReminder(notificationId);
+    }
   },
 
-  // Delete event
-  async deleteEvent(eventId: string): Promise<void> {
+  // Delete event (and cancel scheduled reminder)
+  async deleteEvent(eventId: string, notificationId?: string): Promise<void> {
     const docRef = doc(db, EVENTS_COLLECTION, eventId);
     await deleteDoc(docRef);
+
+    if (notificationId) {
+      await notificationService.cancelEventReminder(notificationId);
+    }
   },
 };

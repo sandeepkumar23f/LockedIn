@@ -16,7 +16,13 @@ import { Ionicons } from '@expo/vector-icons';
 interface CreateEventModalProps {
   visible: boolean;
   onClose: () => void;
-  onCreate: (title: string, description: string, date: string, time: string) => Promise<void>;
+  onCreate: (
+    title: string,
+    description: string,
+    date: string,
+    time: string,
+    reminderOffsetMinutes?: number
+  ) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -27,6 +33,14 @@ const QUICK_TIMES = [
   { label: '03:00 PM', value: '15:00' },
   { label: '06:00 PM', value: '18:00' },
   { label: '08:00 PM', value: '20:00' },
+];
+
+const REMINDER_OPTIONS: { label: string; value: number | undefined }[] = [
+  { label: 'No Reminder', value: undefined },
+  { label: 'At Event Time', value: 0 },
+  { label: '5m Before', value: 5 },
+  { label: '15m Before', value: 15 },
+  { label: '30m Before', value: 30 },
 ];
 
 export const CreateEventModal: React.FC<CreateEventModalProps> = ({
@@ -46,12 +60,14 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(getTodayString());
   const [time, setTime] = useState('13:00'); // Default to 1:00 PM
+  const [reminderOffset, setReminderOffset] = useState<number | undefined>(0); // Default to At Event Time
 
   const resetForm = () => {
     setTitle('');
     setDescription('');
     setDate(getTodayString());
     setTime('13:00');
+    setReminderOffset(0);
   };
 
   const handleClose = () => {
@@ -70,14 +86,14 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       return;
     }
 
-    await onCreate(title.trim(), description.trim(), date, time.trim());
+    await onCreate(title.trim(), description.trim(), date, time.trim(), reminderOffset);
     resetForm();
   };
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View className="flex-1 bg-black/50 justify-end">
-        <View className="bg-white rounded-t-3xl px-6 pt-6 pb-10 max-h-[85%]">
+        <View className="bg-white rounded-t-3xl px-6 pt-6 pb-10 max-h-[88%]">
           {/* Handle Bar */}
           <View className="w-12 h-1.5 bg-gray-300 rounded-full self-center mb-4" />
 
@@ -203,6 +219,40 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                     value={date}
                     onChangeText={setDate}
                   />
+                </View>
+              </View>
+
+              {/* Notification & Reminder Selector */}
+              <View className="mb-4">
+                <View className="flex-row items-center mb-1.5">
+                  <Ionicons name="notifications-outline" size={16} color="#4F46E5" style={{ marginRight: 6 }} />
+                  <Text className="text-gray-700 font-semibold text-sm">
+                    Reminder Notification
+                  </Text>
+                </View>
+                <View className="flex-row flex-wrap gap-2">
+                  {REMINDER_OPTIONS.map((option, idx) => {
+                    const isSelected = reminderOffset === option.value;
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        className={`px-3 py-2 rounded-lg border ${
+                          isSelected
+                            ? 'bg-indigo-50 border-indigo-600'
+                            : 'bg-gray-50 border-gray-200'
+                        }`}
+                        onPress={() => setReminderOffset(option.value)}
+                      >
+                        <Text
+                          className={`text-xs font-semibold ${
+                            isSelected ? 'text-indigo-600 font-bold' : 'text-gray-600'
+                          }`}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
 

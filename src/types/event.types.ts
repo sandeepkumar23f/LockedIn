@@ -6,6 +6,8 @@ export interface EventItem {
   date: string;
   time: string;
   isCompleted: boolean;
+  notificationId?: string;
+  reminderOffsetMinutes?: number;
   createdAt?: any;
 }
 
@@ -14,4 +16,5 @@ export interface CreateEventInput {
   description?: string;
   date: string;
   time: string;
+  reminderOffsetMinutes?: number;
 }

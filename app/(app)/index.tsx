@@ -14,10 +14,22 @@ export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  const handleCreateEvent = async (title: string, description: string, date: string, time: string) => {
+  const handleCreateEvent = async (
+    title: string,
+    description: string,
+    date: string,
+    time: string,
+    reminderOffsetMinutes?: number
+  ) => {
     setIsCreating(true);
     try {
-      const result = await createEvent({ title, description, date, time });
+      const result = await createEvent({
+        title,
+        description,
+        date,
+        time,
+        reminderOffsetMinutes,
+      });
       if (result) {
         setModalVisible(false);
       } else {
@@ -30,13 +42,17 @@ export default function HomeScreen() {
     }
   };
 
-  const handleDeleteEvent = (eventId: string) => {
+  const handleDeleteEvent = (eventId: string, notificationId?: string) => {
     Alert.alert(
       'Delete Event',
       'Are you sure you want to delete this event?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteEvent(eventId) },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteEvent(eventId, notificationId),
+        },
       ]
     );
   };
